@@ -1,2 +1,3 @@
 # core
-极简内核
+Puppy RTOS 极简内核
+
