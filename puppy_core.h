@@ -31,6 +31,10 @@ typedef union {
 
 #define P_UNUSED(x)                   ((void)x)
 
+#if defined(__ARMCC_VERSION)           /* ARM Compiler */
+typedef unsigned long ssize_t;
+#endif
+
 /* Puppy-RTOS object definitions */
 typedef size_t            pup_ubase_t;
 typedef ssize_t           pup_base_t;
@@ -112,7 +116,7 @@ int pup_pthread_attr_setcpu(pthread_attr_t * thread_attributes, int cpu);
 int pup_pthread_attr_settimeslice(pthread_attr_t * thread_attributes, size_t thread_time_slice);
 int pup_pthread_information_get(pthread_t thread_handle, char ** name, int * state, int * priority, 
  void ** stack_limit, void ** stack_pointer, size_t * minimum_stack, pthread_t * next_thread);
-
+pthread_t pup_thread_next(void);
 
 /**@}*/
 
@@ -156,6 +160,7 @@ void *arch_new_thread(void         *entry,
                       void    *stack_addr,
                       uint32_t stack_size);
 void arch_swap(pthread_t old_thread, pthread_t new_thread);
+void *pup_pthread_archdata(pthread_t obj);
 
 typedef union {
     unsigned long slock;
