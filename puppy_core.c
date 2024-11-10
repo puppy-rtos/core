@@ -14,18 +14,6 @@
 /**
  * @brief static structure declaration
  */
-struct _list_node {
-    union {
-        struct _list_node *head; /* ptr to head of list (pup_list_t) */
-        struct _list_node *next; /* ptr to next node    (pup_node_t) */
-    };
-    union {
-        struct _list_node *tail; /* ptr to tail of list (pup_list_t) */
-        struct _list_node *prev; /* ptr to previous node (pup_node_t) */
-    };
-};
-typedef struct _list_node pup_list_t;
-typedef struct _list_node pup_node_t;
 
 const pthread_attr_t pthread_default_attr = {
     "pthread",
@@ -104,7 +92,7 @@ static int pup_sched_ready_insert(struct _pthread_obj *thread);
  * @param node A pup_node_t pointer to peek each node of the list
  */
 #define pup_list_for_each_node(list, node) \
-    for (node = (list)->head; node != (list); node = node->next)
+    for (node = (list)->next; node != (list); node = node->next)
 
 /**
  * @brief Provide the primitive to safely iterate on a list
@@ -114,17 +102,17 @@ static int pup_sched_ready_insert(struct _pthread_obj *thread);
  * @param node_s A pup_node_t pointer for the loop to run safely
  */
 #define pup_list_for_each_node_safe(list, node, node_s) \
-    for (node = (list)->head, node_s = node->next; node != (list); \
+    for (node = (list)->next, node_s = node->next; node != (list); \
         node = node_s, node_s = node->next)
 
 #define P_LIST_STATIC_INIT(list_ptr) { {(list_ptr)}, {(list_ptr)} }
 
 static inline void pup_list_init(pup_list_t *list) {
-    list->head = list->tail = list;
+    list->next = list->prev = list;
 }
 
 static inline bool pup_list_is_empty(pup_list_t *list) {
-    return list->head == list;
+    return list->next == list;
 }
 
 static inline bool pup_node_is_linked(pup_node_t *node) {
@@ -141,13 +129,13 @@ static inline bool pup_node_is_linked(pup_node_t *node) {
  */
 
 static inline void pup_list_append(pup_list_t *list, pup_node_t *node) {
-    pup_node_t *const tail = list->tail;
+    pup_node_t *const tail = list->prev;
 
     node->next = list;
     node->prev = tail;
 
     tail->next = node;
-    list->tail = node;
+    list->prev = node;
 }
 
 /**
@@ -160,13 +148,13 @@ static inline void pup_list_append(pup_list_t *list, pup_node_t *node) {
  */
 
 static inline void pup_list_prepend(pup_list_t *list, pup_node_t *node) {
-    pup_node_t *const head = list->head;
+    pup_node_t *const head = list->next;
 
     node->next = head;
     node->prev = list;
 
     head->prev = node;
-    list->head = node;
+    list->next = node;
 }
 
 /**
@@ -363,7 +351,7 @@ static int pup_sched_ready_insert(struct _pthread_obj *thread) {
         pup_list_append(_ready_queue, &_thread->tnode);
     }
     
-    KLOG_D("p_sched_ready_insert done:_ready_queue->head:%x", _ready_queue->head);
+    KLOG_D("p_sched_ready_insert done:_ready_queue->head:%x", _ready_queue->next);
 
 #if P_CPU_NR > 1
     if(cpuid_last != PUP_GET_CPU_ID()) {
@@ -394,7 +382,7 @@ struct _pthread_obj *pup_sched_ready_highest(void) {
     pup_list_t *_ready_queue = &pup_cpu_self()->ready_queue;
 
     if (!pup_list_is_empty(_ready_queue)) {
-        highest_thread = pup_list_entry(_ready_queue->head, struct _pthread_obj, tnode);
+        highest_thread = pup_list_entry(_ready_queue->next, struct _pthread_obj, tnode);
         KLOG_ASSERT(highest_thread != NULL);
     }
 
@@ -516,8 +504,11 @@ int pthread_join(pthread_t thread_handle, void ** value_destination) {
     pup_base_t key = arch_irq_lock();
     KLOG_ASSERT(_thread != NULL);
     KLOG_ASSERT(_thread != _self);
-    KLOG_ASSERT(_thread->state != P_THREAD_STATE_DEAD);
     KLOG_ASSERT(_thread->join_thread == NULL);
+    
+    if(_thread->state == P_THREAD_STATE_DEAD) {
+        return -1;
+    }
 
     _thread->exit_value = value_destination;
     _thread->join_thread = _self;
@@ -569,11 +560,13 @@ void *pup_pthread_archdata(pthread_t obj) {
 char main_pthread_stack[4096];
 void *puppy_main_thread(void *arg);
 void puppy_init(void) {
-    pup_cpu_init();
     pthread_attr_t attr;
+    
+    pup_cpu_init();
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, sizeof(main_pthread_stack));
     pthread_attr_setstackaddr(&attr, main_pthread_stack);
+    
     pthread_create(NULL, &attr, puppy_main_thread, NULL);
 #if P_CPU_NR > 1
     pup_subcpu_start();
@@ -581,3 +574,91 @@ void puppy_init(void) {
     pup_sched_unlock();
     while (1);
 }
+/**
+ * @addtogroup Semaphores
+ * @{
+ */
+
+int sem_init(sem_t * semaphore_handle, int pshared, unsigned int value) {
+    semaphore_handle->value = value;
+    pup_list_init(&semaphore_handle->blocking_list);
+    return 0;
+}
+
+int sem_destroy(sem_t * semaphore_handle) {
+    return 0;
+}
+
+static void _block_thread(pup_list_t *list, struct _pthread_obj * thread) {
+    struct _pthread_obj *temp_thread;
+    if (pup_list_is_empty(list)) {
+        pup_list_append(list, &thread->tnode);
+    }
+    else {
+        pup_node_t *pos = list->next;
+        while(pos != list) {
+            temp_thread = pup_list_entry(pos, struct _pthread_obj, tnode);
+            if (temp_thread->prio > thread->prio) {
+                break;
+            }
+			pos = pos->next;
+		}
+        if (pos != list) {
+            pup_list_insert(pos, &thread->tnode);
+        }
+        else {
+            pup_list_append(list, &thread->tnode);
+        }
+    }
+    KLOG_D("_block_thread:%s", thread->kobj.name);
+    thread->state = P_THREAD_STATE_BLOCK;
+}
+
+static void _wakeup_block_thread(pup_list_t *list){ 
+    struct _pthread_obj *_thread;
+    _thread = pup_list_entry(list->next,
+                            struct _pthread_obj, tnode);
+    pup_list_remove(&_thread->tnode);
+    KLOG_D("_wakeup_block_thread:%s", _thread->kobj.name);
+    pup_sched_ready_insert(_thread);
+}
+
+int sem_post(sem_t * semaphore_handle) {
+    sem_t *sem = semaphore_handle;
+    pup_base_t key = arch_irq_lock();
+
+    sem->value ++;
+    if (pup_list_is_empty(&sem->blocking_list)) {
+        goto _exit;
+    }
+    _wakeup_block_thread(&sem->blocking_list);
+    pup_sched();
+    return 0;
+_exit:
+    arch_irq_unlock(key);
+    return -1;
+}
+
+int sem_trywait(sem_t * semaphore_handle) {
+    return -1;
+}
+
+int sem_wait(sem_t * semaphore_handle) {
+    sem_t *sem = semaphore_handle;
+    int ret = 0;
+    pup_base_t key = arch_irq_lock();
+    if (sem->value > 0) {
+        sem->value --;
+        goto _exit;
+    }
+    _block_thread(&sem->blocking_list, pthread_self());
+    ret = pup_sched();
+    if (ret == 0) {
+        sem->value --;
+    }
+_exit:
+    arch_irq_unlock(key);
+    return ret;
+}
+
+/**@}*/

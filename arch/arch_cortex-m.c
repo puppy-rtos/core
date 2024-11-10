@@ -120,12 +120,12 @@ void *arch_new_thread(void         *entry,
                       void    *stack_addr,
                       uint32_t stack_size)
 {
-    int i;
+    uint32_t i;
     struct arch_thread *arch_data;
     _sf_t *sf;
     
-    arch_data = (struct arch_thread *)P_ALIGN_DOWN(((uint32_t)stack_addr + stack_size) - sizeof(struct arch_thread), 8);
-    sf = (_sf_t *)P_ALIGN_DOWN((uint32_t)arch_data - sizeof(_sf_t), 8);
+    arch_data = (struct arch_thread *)P_ALIGN_DOWN(((uint32_t)stack_addr + stack_size) - sizeof(struct arch_thread), 8UL);
+    sf = (_sf_t *)P_ALIGN_DOWN((uint32_t)arch_data - sizeof(_sf_t), 8UL);
 
     /* init all register */
     for (i = 0; i < sizeof(_sf_t) / sizeof(uint32_t); i ++)
@@ -159,6 +159,8 @@ void arch_swap(pthread_t old_thread, pthread_t new_thread)
 
     arch_irq_lock();
 }
+extern void *arch_get_from_sp(void);
+extern void *arch_get_to_sp(void);
 
 void *arch_get_from_sp(void)
 {
@@ -222,7 +224,7 @@ struct exception_info
     struct stack_frame stack_frame;
 };
 
-void dump_contex_esf(_esf_t *esf)
+static void dump_contex_esf(_esf_t *esf)
 {
     printk("psr: 0x%08x\n", esf->psr);
     printk("r00: 0x%08x\n", esf->r0);
@@ -234,7 +236,7 @@ void dump_contex_esf(_esf_t *esf)
     printk(" pc: 0x%08x\n", esf->pc);
 }
 
-void dump_contex(struct stack_frame *context)
+static void dump_contex(struct stack_frame *context)
 {
     printk("psr: 0x%08x\n", context->esf.psr);
     printk("r00: 0x%08x\n", context->esf.r0);

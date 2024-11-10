@@ -46,6 +46,13 @@ typedef pup_ubase_t       pup_tick_t;
 
 int printk(const char *fmt, ...);
 
+struct _list_node {
+    struct _list_node *next; /* ptr to next node    (pup_node_t) */
+    struct _list_node *prev; /* ptr to previous node (pup_node_t) */
+};
+typedef struct _list_node pup_list_t;
+typedef struct _list_node pup_node_t;
+
 /**@}*/
 
 /**
@@ -102,6 +109,7 @@ void pthread_exit(void * exit_value);
 int pthread_join(pthread_t thread_handle, void ** value_destination);
 pthread_t pthread_self(void);
 int sched_yield(void);
+int sched_getcpu(void);
 int pup_pthread_priority_change(pthread_t thread_handle, int new_priority, int * old_priority);
 int pup_pthread_resume(pthread_t thread_handle);
 int pup_pthread_start(size_t run_time_id, void * memory_start, size_t memory_size);
@@ -125,11 +133,18 @@ pthread_t pup_thread_next(void);
  * @{
  */
 
-// int sem_destroy(sem_t * semaphore_handle);
-// int sem_init(sem_t * semaphore_handle, int pshared, unsigned int value);
-// int sem_post(sem_t * semaphore_handle);
-// int sem_trywait(sem_t * semaphore_handle);
-// int sem_wait(sem_t * semaphore_handle);
+struct _sem_obj {
+    uint16_t    value;
+    pup_list_t  blocking_list;
+};
+
+typedef struct _sem_obj sem_t;
+
+int sem_destroy(sem_t * semaphore_handle);
+int sem_init(sem_t * semaphore_handle, int pshared, unsigned int value);
+int sem_post(sem_t * semaphore_handle);
+int sem_trywait(sem_t * semaphore_handle);
+int sem_wait(sem_t * semaphore_handle);
 // int pup_sem_extend_init(sem_t * semaphore_handle, int pshared, unsigned int value, 
 //  semattr_t * semaphore_attributes);
 // int pup_sem_timedwait(sem_t * semaphore_handle, tick_t timemout_ticks);

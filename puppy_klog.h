@@ -58,8 +58,8 @@ extern "C" {
 #define _KLOG_LOG_TIME
 #endif
 
-extern arch_spinlock_t cons_lock;
 #ifdef KLOG_LOCK
+extern arch_spinlock_t cons_lock;
 #define _KLOG_LOG_LOCK    arch_spin_lock(&cons_lock)
 #define _KLOG_LOG_UNLOCK  arch_spin_unlock(&cons_lock)
 #else
@@ -91,24 +91,25 @@ extern arch_spinlock_t cons_lock;
         printk(fmt, ##__VA_ARGS__);                         \
         _KLOG_LOG_X_END;                                    \
         _KLOG_LOG_UNLOCK;                                   \
-    }                                                       \
-    while (0)
+    }while(0)
 
 #define klog_assert(EX)                                     \
-    if (!(EX))                                              \
-    {                                                       \
-        _KLOG_LOG_LOCK;                                     \
-        _KLOG_COLOR(31);                                    \
-        _KLOG_LOG_TIME;                                     \
-        _KLOG_LOG_HDR("A", 31);                             \
-        _KLOG_LOG_CPU;                                      \
-        _KLOG_LOG_THREAD;                                   \
-        printk("(%s) at %s:%d", #EX,                        \
-                __FUNCTION__, __LINE__);                    \
-        _KLOG_LOG_X_END;                                    \
-        while(1);                                           \
-        _KLOG_LOG_UNLOCK;                                   \
-    }
+    do {                                                    \
+        if (!(EX))                                          \
+        {                                                   \
+            _KLOG_LOG_LOCK;                                 \
+            _KLOG_COLOR(31);                                \
+            _KLOG_LOG_TIME;                                 \
+            _KLOG_LOG_HDR("A", 31);                         \
+            _KLOG_LOG_CPU;                                  \
+            _KLOG_LOG_THREAD;                               \
+            printk("(%s) at %s:%d", #EX,                    \
+                    __FUNCTION__, __LINE__);                \
+            _KLOG_LOG_X_END;                                \
+            while(1);                                       \
+            _KLOG_LOG_UNLOCK;                               \
+        }                                                   \
+    }while(0)
 
 #define klog_raw(...)         printk(__VA_ARGS__);
 
