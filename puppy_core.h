@@ -29,7 +29,7 @@ typedef union {
     void            (*thepfunc)(void);
 } pup_max_align_t;
 
-#define P_UNUSED(x)                   ((void)x)
+#define PUP_UNUSED(x)                   ((void)x)
 
 #if defined(__ARMCC_VERSION)           /* ARM Compiler */
 typedef unsigned long ssize_t;
@@ -41,17 +41,10 @@ typedef ssize_t           pup_base_t;
 typedef void             *pup_obj_t;
 typedef pup_ubase_t       pup_tick_t;
 
-#define P_ALIGN(size, align)           (((size) + (align) - 1) & ~((align) - 1))
-#define P_ALIGN_DOWN(size, align)      ((size) & ~((align) - 1))
+#define PUP_ALIGN(size, align)           (((size) + (align) - 1) & ~((align) - 1))
+#define PUP_ALIGN_DOWN(size, align)      ((size) & ~((align) - 1))
 
-int printk(const char *fmt, ...);
-
-struct _list_node {
-    struct _list_node *next; /* ptr to next node    (pup_node_t) */
-    struct _list_node *prev; /* ptr to previous node (pup_node_t) */
-};
-typedef struct _list_node pup_list_t;
-typedef struct _list_node pup_node_t;
+#include <puppy_util.h>
 
 /**@}*/
 
@@ -65,14 +58,14 @@ typedef struct _list_node pup_node_t;
 #define PTHREAD_CREATE_JOINABLE       0
 #define PTHREAD_CREATE_DETACHED       1
 
-#define P_THREAD_STATE_INIT        0x00
-#define P_THREAD_STATE_SLEEP       0x01
-#define P_THREAD_STATE_BLOCK       0x02
-#define P_THREAD_STATE_READY       0x03
-#define P_THREAD_STATE_RUN         0x04
-#define P_THREAD_STATE_DEAD        0x05
+#define PUP_THREAD_STATE_INIT        0x00
+#define PUP_THREAD_STATE_SLEEP       0x01
+#define PUP_THREAD_STATE_BLOCK       0x02
+#define PUP_THREAD_STATE_READY       0x03
+#define PUP_THREAD_STATE_RUN         0x04
+#define PUP_THREAD_STATE_DEAD        0x05
 
-#define P_THREAD_PRIO_MAX          0xFF
+#define PUP_THREAD_PRIO_MAX          0xFF
 
 struct pthread_attr_s
 {
@@ -82,7 +75,7 @@ struct pthread_attr_s
 
     void  *stackaddr;            /* Address of memory to be used as stack */
     size_t stacksize;            /* Size of the stack allocated for the pthread */
-#if P_CPU_NR > 1
+#if PUP_CPU_NR > 1
     uint8_t bindcpu;                 /* CPU number to run the pthread */
 #endif
 };
@@ -110,20 +103,20 @@ int pthread_join(pthread_t thread_handle, void ** value_destination);
 pthread_t pthread_self(void);
 int sched_yield(void);
 int sched_getcpu(void);
-int pup_pthread_priority_change(pthread_t thread_handle, int new_priority, int * old_priority);
-int pup_pthread_resume(pthread_t thread_handle);
-int pup_pthread_start(size_t run_time_id, void * memory_start, size_t memory_size);
-int pup_pthread_stack_check(pthread_t thread_handle, size_t * minimum_available_stack);
-int pup_pthread_suspend(pthread_t thread_handle);
-int pup_pthread_attr_getname(pthread_attr_t * thread_attributes, char ** name);
-int pup_pthread_attr_getpriority(pthread_attr_t * thread_attributes, int * priority);
-int pup_pthread_attr_gettimeslice(pthread_attr_t * thread_attributes, size_t * thread_time_slice);
+// int pup_pthread_priority_change(pthread_t thread_handle, int new_priority, int * old_priority);
+// int pup_pthread_resume(pthread_t thread_handle);
+// int pup_pthread_start(size_t run_time_id, void * memory_start, size_t memory_size);
+// int pup_pthread_stack_check(pthread_t thread_handle, size_t * minimum_available_stack);
+// int pup_pthread_suspend(pthread_t thread_handle);
+// int pup_pthread_attr_getname(pthread_attr_t * thread_attributes, char ** name);
+// int pup_pthread_attr_getpriority(pthread_attr_t * thread_attributes, int * priority);
+// int pup_pthread_attr_gettimeslice(pthread_attr_t * thread_attributes, size_t * thread_time_slice);
 int pup_pthread_attr_setname(pthread_attr_t * thread_attributes, char * name);
 int pup_pthread_attr_setpriority(pthread_attr_t * thread_attributes, int priority);
 int pup_pthread_attr_setcpu(pthread_attr_t * thread_attributes, int cpu);
-int pup_pthread_attr_settimeslice(pthread_attr_t * thread_attributes, size_t thread_time_slice);
-int pup_pthread_information_get(pthread_t thread_handle, char ** name, int * state, int * priority, 
- void ** stack_limit, void ** stack_pointer, size_t * minimum_stack, pthread_t * next_thread);
+// int pup_pthread_attr_settimeslice(pthread_attr_t * thread_attributes, size_t thread_time_slice);
+// int pup_pthread_information_get(pthread_t thread_handle, char ** name, int * state, int * priority, 
+//  void ** stack_limit, void ** stack_pointer, size_t * minimum_stack, pthread_t * next_thread);
 pthread_t pup_thread_next(void);
 
 /**@}*/

@@ -10,7 +10,7 @@
 #include <stdarg.h>
 
 static int _p_vsnprintf(char *buf, size_t size, const char *fmt, va_list args);
-static char _printk_buf[P_PRINTK_BUF_SIZE];
+static char _printk_buf[PUP_PRINTK_BUF_SIZE];
 
 pup_weak int pup_hw_cons_getc(void)
 {
@@ -30,7 +30,7 @@ int printk(const char *fmt, ...)
     int n;
 
     va_start(args, fmt);
-    n = _p_vsnprintf(_printk_buf, P_PRINTK_BUF_SIZE, fmt, args);
+    n = _p_vsnprintf(_printk_buf, PUP_PRINTK_BUF_SIZE, fmt, args);
     va_end(args);
 
     pup_hw_cons_output(_printk_buf, n);

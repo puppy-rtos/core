@@ -10,7 +10,8 @@ __attribute__((always_inline)) inline pup_base_t arch_irq_lock(void)
 {
     pup_base_t key;
 
-    __asm volatile("mrs %0, PRIMASK;"
+    __asm volatile(
+        "mrs %0, PRIMASK;"
         "cpsid i"
         : "=r" (key)
         :
@@ -21,13 +22,10 @@ __attribute__((always_inline)) inline pup_base_t arch_irq_lock(void)
 
 __attribute__((always_inline)) inline void arch_irq_unlock(pup_base_t key)
 {
-    if (key != 0U) {
-        return;
-    }
     __asm volatile(
-        "cpsie i;"
-        "isb"
-        : : : "memory");
+        "msr PRIMASK, %0;"
+        : "=r" (key)
+        : : "memory");
 }
 
 __attribute__((always_inline)) inline bool arch_irq_locked(pup_base_t key)
@@ -124,8 +122,8 @@ void *arch_new_thread(void         *entry,
     struct arch_thread *arch_data;
     _sf_t *sf;
     
-    arch_data = (struct arch_thread *)P_ALIGN_DOWN(((uint32_t)stack_addr + stack_size) - sizeof(struct arch_thread), 8UL);
-    sf = (_sf_t *)P_ALIGN_DOWN((uint32_t)arch_data - sizeof(_sf_t), 8UL);
+    arch_data = (struct arch_thread *)PUP_ALIGN_DOWN(((uint32_t)stack_addr + stack_size) - sizeof(struct arch_thread), 8UL);
+    sf = (_sf_t *)PUP_ALIGN_DOWN((uint32_t)arch_data - sizeof(_sf_t), 8UL);
 
     /* init all register */
     for (i = 0; i < sizeof(_sf_t) / sizeof(uint32_t); i ++)
@@ -154,10 +152,6 @@ void arch_swap(pthread_t old_thread, pthread_t new_thread)
 	/* set pending bit to make sure we will take a PendSV exception */
 	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 
-	/* clear mask or enable all irqs to take a pendsv */
-	arch_irq_unlock(0);
-
-    arch_irq_lock();
 }
 extern void *arch_get_from_sp(void);
 extern void *arch_get_to_sp(void);
