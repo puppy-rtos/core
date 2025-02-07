@@ -38,14 +38,7 @@
 #define PUP_CPU_NR 1
 #endif
 
-#define KLOG_ENABLE
-#define KLOG_COLOR
-// #define KLOG_TIME
-#define KLOG_CPU
-#define KLOG_THREAD
-#define KLOG_LOCK
-
-// uint8_t pup_cpu_self_id();
-// #define PUP_GET_CPU_ID() pup_cpu_self_id()
+#define PUP_ASSERT(...) 
+#define PUP_PRINTK(...)
 
 #endif

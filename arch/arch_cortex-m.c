@@ -220,34 +220,34 @@ struct exception_info
 
 static void dump_contex_esf(_esf_t *esf)
 {
-    printk("psr: 0x%08x\n", esf->psr);
-    printk("r00: 0x%08x\n", esf->r0);
-    printk("r01: 0x%08x\n", esf->r1);
-    printk("r02: 0x%08x\n", esf->r2);
-    printk("r03: 0x%08x\n", esf->r3);
-    printk("r12: 0x%08x\n", esf->r12);
-    printk(" lr: 0x%08x\n", esf->lr);
-    printk(" pc: 0x%08x\n", esf->pc);
+    PUP_PRINTK("psr: 0x%08x\n", esf->psr);
+    PUP_PRINTK("r00: 0x%08x\n", esf->r0);
+    PUP_PRINTK("r01: 0x%08x\n", esf->r1);
+    PUP_PRINTK("r02: 0x%08x\n", esf->r2);
+    PUP_PRINTK("r03: 0x%08x\n", esf->r3);
+    PUP_PRINTK("r12: 0x%08x\n", esf->r12);
+    PUP_PRINTK(" lr: 0x%08x\n", esf->lr);
+    PUP_PRINTK(" pc: 0x%08x\n", esf->pc);
 }
 
 static void dump_contex(struct stack_frame *context)
 {
-    printk("psr: 0x%08x\n", context->esf.psr);
-    printk("r00: 0x%08x\n", context->esf.r0);
-    printk("r01: 0x%08x\n", context->esf.r1);
-    printk("r02: 0x%08x\n", context->esf.r2);
-    printk("r03: 0x%08x\n", context->esf.r3);
-    printk("r04: 0x%08x\n", context->r4);
-    printk("r05: 0x%08x\n", context->r5);
-    printk("r06: 0x%08x\n", context->r6);
-    printk("r07: 0x%08x\n", context->r7);
-    printk("r08: 0x%08x\n", context->r8);
-    printk("r09: 0x%08x\n", context->r9);
-    printk("r10: 0x%08x\n", context->r10);
-    printk("r11: 0x%08x\n", context->r11);
-    printk("r12: 0x%08x\n", context->esf.r12);
-    printk(" lr: 0x%08x\n", context->esf.lr);
-    printk(" pc: 0x%08x\n", context->esf.pc);
+    PUP_PRINTK("psr: 0x%08x\n", context->esf.psr);
+    PUP_PRINTK("r00: 0x%08x\n", context->esf.r0);
+    PUP_PRINTK("r01: 0x%08x\n", context->esf.r1);
+    PUP_PRINTK("r02: 0x%08x\n", context->esf.r2);
+    PUP_PRINTK("r03: 0x%08x\n", context->esf.r3);
+    PUP_PRINTK("r04: 0x%08x\n", context->r4);
+    PUP_PRINTK("r05: 0x%08x\n", context->r5);
+    PUP_PRINTK("r06: 0x%08x\n", context->r6);
+    PUP_PRINTK("r07: 0x%08x\n", context->r7);
+    PUP_PRINTK("r08: 0x%08x\n", context->r8);
+    PUP_PRINTK("r09: 0x%08x\n", context->r9);
+    PUP_PRINTK("r10: 0x%08x\n", context->r10);
+    PUP_PRINTK("r11: 0x%08x\n", context->r11);
+    PUP_PRINTK("r12: 0x%08x\n", context->esf.r12);
+    PUP_PRINTK(" lr: 0x%08x\n", context->esf.lr);
+    PUP_PRINTK(" pc: 0x%08x\n", context->esf.pc);
 }
 
 void arch_hardfault_exception(struct exception_info *exception_info)
@@ -256,16 +256,16 @@ void arch_hardfault_exception(struct exception_info *exception_info)
 
     if (exception_info->exc_return & (1 << 2))
     {
-        printk("hard fault on thread\n");
+        PUP_PRINTK("hard fault on thread\n");
     }
     else
     {
-        printk("hard fault on handler\n");
+        PUP_PRINTK("hard fault on handler\n");
     }
 
     if ( (exception_info->exc_return & 0x10) == 0)
     {
-        printk("FPU active!\n");
+        PUP_PRINTK("FPU active!\n");
     }
 
     dump_contex(context);

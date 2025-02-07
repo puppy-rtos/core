@@ -19,16 +19,6 @@
 #define pup_used                   __attribute__((used))
 #define pup_align(n)               __attribute__((aligned(n)))
 
-typedef union {
-    long long       thelonglong;
-    long double     thelongdouble;
-    uintmax_t       theuintmax_t;
-    size_t          thesize_t;
-    uintptr_t       theuintptr_t;
-    void            *thepvoid;
-    void            (*thepfunc)(void);
-} pup_max_align_t;
-
 #define PUP_UNUSED(x)                   ((void)x)
 
 #if defined(__ARMCC_VERSION)           /* ARM Compiler */
@@ -43,8 +33,140 @@ typedef pup_ubase_t       pup_tick_t;
 
 #define PUP_ALIGN(size, align)           (((size) + (align) - 1) & ~((align) - 1))
 #define PUP_ALIGN_DOWN(size, align)      ((size) & ~((align) - 1))
+/**
+ * pup_container_of - return the start address of struct type, while ptr is the
+ * member of struct type.
+ */
+#define pup_container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - (unsigned long)(&((type *)0)->member)))
 
-#include <puppy_util.h>
+/**
+ * @addtogroup list
+ * @{
+ */
+
+struct _list_node {
+    struct _list_node *next; /* ptr to next node    (pup_node_t) */
+    struct _list_node *prev; /* ptr to previous node (pup_node_t) */
+};
+typedef struct _list_node pup_list_t;
+typedef struct _list_node pup_node_t;
+
+/**
+ * pup_container_of - return the start address of struct type, while ptr is the
+ * member of struct type.
+ */
+#define pup_container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - (unsigned long)(&((type *)0)->member)))
+
+/**
+ * @brief get the struct for this entry
+ * @param node the entry point
+ * @param type the type of structure
+ * @param member the name of list in structure
+ */
+#define pup_list_entry(node, type, member) \
+    pup_container_of(node, type, member)
+
+/**
+ * @brief Provide the primitive to iterate on a list
+ * Note: the loop is unsafe and thus node should not be removed
+ * @param list A pointer on a pup_list_t to iterate on.
+ * @param node A pup_node_t pointer to peek each node of the list
+ */
+#define pup_list_for_each_node(list, node) \
+    for (node = (list)->next; node != (list); node = node->next)
+
+/**
+ * @brief Provide the primitive to safely iterate on a list
+ * Note: node can be removed, it will not break the loop.
+ * @param list A pointer on a pup_list_t to iterate on.
+ * @param node A pup_node_t pointer to peek each node of the list
+ * @param node_s A pup_node_t pointer for the loop to run safely
+ */
+#define pup_list_for_each_node_safe(list, node, node_s) \
+    for (node = (list)->next, node_s = node->next; node != (list); \
+        node = node_s, node_s = node->next)
+
+#define PUP_LIST_STATIC_INIT(list_ptr) { {(list_ptr)}, {(list_ptr)} }
+
+static inline void pup_list_init(pup_list_t *list) {
+    list->next = list->prev = list;
+}
+
+static inline bool pup_list_is_empty(pup_list_t *list) {
+    return list->next == list;
+}
+
+static inline bool pup_node_is_linked(pup_node_t *node) {
+    return node->next != NULL;
+}
+
+/**
+ * @brief add node to tail of list
+ *
+ * This and other pup_list_*() functions are not thread safe.
+ *
+ * @param list the doubly-linked list to operate on
+ * @param node the element to append
+ */
+
+static inline void pup_list_append(pup_list_t *list, pup_node_t *node) {
+    pup_node_t *const tail = list->prev;
+
+    node->next = list;
+    node->prev = tail;
+
+    tail->next = node;
+    list->prev = node;
+}
+
+/**
+ * @brief add node to head of list
+ *
+ * This and other pup_list_*() functions are not thread safe.
+ *
+ * @param list the doubly-linked list to operate on
+ * @param node the element to append
+ */
+
+static inline void pup_list_prepend(pup_list_t *list, pup_node_t *node) {
+    pup_node_t *const head = list->next;
+
+    node->next = head;
+    node->prev = list;
+
+    head->prev = node;
+    list->next = node;
+}
+
+/**
+ * @brief Insert a node into a list
+ *
+ * Insert a node before a specified node in a dlist.
+ *
+ * @param successor the position before which "node" will be inserted
+ * @param node the element to insert
+ */
+static inline void pup_list_insert(pup_node_t *successor, pup_node_t *node) {
+    pup_node_t *const prev = successor->prev;
+
+    node->prev = prev;
+    node->next = successor;
+    prev->next = node;
+    successor->prev = node;
+}
+
+/**
+ * @brief remove node from list.
+ * @param node the node to remove from the list.
+ */
+static inline void pup_list_remove(pup_node_t *node) {
+    node->next->prev = node->prev;
+    node->prev->next = node->next;
+
+    node->prev = node->next = NULL;
+}
 
 /**@}*/
 

@@ -7,10 +7,6 @@
 #include <puppy_core.h>
 #include <string.h>
 
-#define KLOG_TAG  "core"
-#define KLOG_LVL  KLOG_WARNING
-#include <puppy_klog.h>
-
 /**
  * @brief static structure declaration
  */
@@ -200,7 +196,7 @@ static int pup_sched_ready_insert(struct _pthread_obj *thread) {
 
     pup_node_t *node;
     pup_list_t *_ready_queue;
-    KLOG_ASSERT(_thread != NULL);
+    PUP_ASSERT(_thread != NULL);
     
 #if PUP_CPU_NR > 1
     uint8_t need_send = CPU_NA;
@@ -230,11 +226,11 @@ static int pup_sched_ready_insert(struct _pthread_obj *thread) {
         pup_list_append(_ready_queue, &_thread->tnode);
     }
     
-    KLOG_D("p_sched_ready_insert done:_ready_queue->head:%x", _ready_queue->next);
+    // PUP_PRINTK("p_sched_ready_insert done:_ready_queue->head:%x", _ready_queue->next);
 
 #if PUP_CPU_NR > 1
     if(cpuid_last != PUP_GET_CPU_ID()) {
-        KLOG_D("need send ipi");
+        // PUP_PRINTK("need send ipi");
         need_send = cpuid_last;
     }
     cpuid_last = (cpuid_last + 1) % PUP_CPU_NR;
@@ -262,7 +258,7 @@ struct _pthread_obj *pup_sched_ready_highest(void) {
 
     if (!pup_list_is_empty(_ready_queue)) {
         highest_thread = pup_list_entry(_ready_queue->next, struct _pthread_obj, tnode);
-        KLOG_ASSERT(highest_thread != NULL);
+        PUP_ASSERT(highest_thread != NULL);
     }
 
     arch_spin_unlock(&_g_cpu_lock);
@@ -275,7 +271,7 @@ static int pup_sched_ready_remove(struct _pthread_obj *thread) {
     pup_base_t key = arch_irq_lock();
     
 
-    KLOG_D("p_sched_ready_remove:tnode:%x",&_thread->tnode);
+    // PUP_PRINTK("p_sched_ready_remove:tnode:%x",&_thread->tnode);
     pup_list_remove(&_thread->tnode);
 
     arch_irq_unlock(key);
@@ -291,12 +287,12 @@ static int pup_sched_ready_remove(struct _pthread_obj *thread) {
  */
 
 void pup_thread_entry(void (*entry)(void *parameter), void *param) {
-    KLOG_D("p_thread_entry enter...");
+    // PUP_PRINTK("p_thread_entry enter...");
     if (entry) {
         entry(param);
     }
     
-    KLOG_D("p_thread_entry exit...");
+    // PUP_PRINTK("p_thread_entry exit...");
     pthread_exit(NULL);
     while (1);
 }
@@ -357,12 +353,12 @@ int pthread_create(pthread_t * thread_handle, pthread_attr_t * attr,
     int ret = 0;
     struct _pthread_obj *pthread_obj;
 
-    KLOG_ASSERT(attr && attr->stackaddr);
+    PUP_ASSERT(attr && attr->stackaddr);
     // create pthread date from stack top.
-    KLOG_D("pthread_obj attr.stackaddr:0x%x, size:%d", attr->stackaddr, attr->stacksize);
+    // PUP_PRINTK("pthread_obj attr.stackaddr:0x%x, size:%d", attr->stackaddr, attr->stacksize);
     pthread_obj = (struct _pthread_obj*)PUP_ALIGN_DOWN((pup_ubase_t)(attr->stackaddr + 
             (attr->stacksize - sizeof(struct _pthread_obj))) , PUP_ALIGN_SIZE);
-    KLOG_D("pthread_obj created at addr:0x%x", pthread_obj);
+    // PUP_PRINTK("pthread_obj created at addr:0x%x", pthread_obj);
     if (!pthread_obj) return 0;
 
     memset(pthread_obj, 0x0, sizeof(struct _pthread_obj));
@@ -402,9 +398,9 @@ int pthread_join(pthread_t thread_handle, void ** value_destination) {
     struct _pthread_obj *_thread = thread_handle;
     struct _pthread_obj *_self = pthread_self();
     pup_base_t key = arch_irq_lock();
-    KLOG_ASSERT(_thread != NULL);
-    KLOG_ASSERT(_thread != _self);
-    KLOG_ASSERT(_thread->join_thread == NULL);
+    PUP_ASSERT(_thread != NULL);
+    PUP_ASSERT(_thread != _self);
+    PUP_ASSERT(_thread->join_thread == NULL);
     
     if(_thread->state == PUP_THREAD_STATE_DEAD) {
         return -1;
@@ -444,8 +440,8 @@ void pup_pthread_list(void)
 
     maxlen = 8;
 
-    printk("thread    pri  state   stack size max used \n");
-    printk("--------  ---  ------- ----------  ------  \n");
+    PUP_PRINTK("thread    pri  state   stack size max used \n");
+    PUP_PRINTK("--------  ---  ------- ----------  ------  \n");
 
     pup_list_for_each_node(&_g_pobj_list, node)
     {
@@ -455,19 +451,19 @@ void pup_pthread_list(void)
             uint8_t *ptr;
             struct _pthread_obj *thread = (struct _pthread_obj *)object;
 
-            printk("%-*.*s  %3d ", maxlen, maxlen, thread->attr.name, thread->prio);
+            PUP_PRINTK("%-*.*s  %3d ", maxlen, maxlen, thread->attr.name, thread->prio);
 
             stat = thread->state;
-            if (stat == PUP_THREAD_STATE_READY)        printk(" ready  ");
-            else if (stat == PUP_THREAD_STATE_BLOCK)   printk(" blocked");
-            else if (stat == PUP_THREAD_STATE_INIT)    printk(" init   ");
-            else if (stat == PUP_THREAD_STATE_DEAD)    printk(" dead   ");
-            else if (stat == PUP_THREAD_STATE_RUN)     printk(" running");
-            else if (stat == PUP_THREAD_STATE_SLEEP)   printk(" sleep  ");
+            if (stat == PUP_THREAD_STATE_READY)        PUP_PRINTK(" ready  ");
+            else if (stat == PUP_THREAD_STATE_BLOCK)   PUP_PRINTK(" blocked");
+            else if (stat == PUP_THREAD_STATE_INIT)    PUP_PRINTK(" init   ");
+            else if (stat == PUP_THREAD_STATE_DEAD)    PUP_PRINTK(" dead   ");
+            else if (stat == PUP_THREAD_STATE_RUN)     PUP_PRINTK(" running");
+            else if (stat == PUP_THREAD_STATE_SLEEP)   PUP_PRINTK(" sleep  ");
 
             ptr = (uint8_t *)thread->attr.stackaddr;
             while (*ptr == '#') ptr ++;
-            printk(" 0x%08x    %02d%%  \n",
+            PUP_PRINTK(" 0x%08x    %02d%%  \n",
                         thread->attr.stacksize,
                         (thread->attr.stacksize - ((pup_ubase_t) ptr - (pup_ubase_t) thread->attr.stackaddr)) * 100
                         / thread->attr.stacksize);
@@ -479,8 +475,8 @@ int sched_yield(void) {
     struct _pthread_obj *_thread = pup_cpu_self()->curr_thread;
     pup_base_t key = arch_irq_lock();
     
-    KLOG_ASSERT(pup_cpu_self()->curr_thread != NULL);
-    KLOG_ASSERT(_thread->state == PUP_THREAD_STATE_RUN);
+    PUP_ASSERT(pup_cpu_self()->curr_thread != NULL);
+    PUP_ASSERT(_thread->state == PUP_THREAD_STATE_RUN);
 
     pup_sched_ready_insert(_thread);
     pup_sched();
@@ -496,30 +492,15 @@ void *pup_pthread_archdata(pthread_t obj) {
     return thread->arch_data;
 }
 
-const PUP_SECTION_START_DEFINE(PUP_INIT_SECTION, _init_start);
-const PUP_SECTION_END_DEFINE(PUP_INIT_SECTION, _init_end);
-static void _init_fn_run(void)
-{
-    struct pup_ex_fn *ptr_begin, *ptr_end;
-    volatile struct pup_ex_fn *init_fn;
-    ptr_begin = (struct pup_ex_fn *)PUP_SECTION_START_ADDR(_init_start);
-    ptr_end = (struct pup_ex_fn *)PUP_SECTION_END_ADDR(_init_end);
-    for (init_fn = ptr_begin; init_fn < ptr_end;)
-    {
-        KLOG_D("init [%s] init...",  init_fn->name);
-        (init_fn ++)->func();
-    }
-}
-
 void pup_show_version(void)
 {
-    printk("\n\nBuild Time: %s %s\n", __DATE__, __TIME__);
-    printk("                           _         \n");
-    printk("    ____   ____    _____  (_) _  __\n");
-    printk("   / __ \\ / __ \\  / ___/ / / | |/_/\n");
-    printk("  / /_/ // /_/ / (__  ) / /  >  <  \n");
-    printk(" / .___/ \\____/ /____/ /_/  /_/|_|  \n");
-    printk("/_/          Powered dy puppy-rtos\n");
+    PUP_PRINTK("\n\nBuild Time: %s %s\n", __DATE__, __TIME__);
+    PUP_PRINTK("                           _         \n");
+    PUP_PRINTK("    ____   ____    _____  (_) _  __\n");
+    PUP_PRINTK("   / __ \\ / __ \\  / ___/ / / | |/_/\n");
+    PUP_PRINTK("  / /_/ // /_/ / (__  ) / /  >  <  \n");
+    PUP_PRINTK(" / .___/ \\____/ /____/ /_/  /_/|_|  \n");
+    PUP_PRINTK("/_/          Powered dy puppy-rtos\n");
 }
 
 char main_pthread_stack[4096];
@@ -529,7 +510,6 @@ void puppy_init(void) {
     
     pup_cpu_init();
     pup_show_version();
-    _init_fn_run();
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, sizeof(main_pthread_stack));
     pthread_attr_setstackaddr(&attr, main_pthread_stack);
@@ -578,7 +558,7 @@ static void _block_thread(pup_list_t *list, struct _pthread_obj * thread) {
             pup_list_append(list, &thread->tnode);
         }
     }
-    KLOG_D("_block_thread:%s", thread->kobj.name);
+    // PUP_PRINTK("_block_thread:%s", thread->kobj.name);
     thread->state = PUP_THREAD_STATE_BLOCK;
 }
 
@@ -587,7 +567,7 @@ static void _wakeup_block_thread(pup_list_t *list){
     _thread = pup_list_entry(list->next,
                             struct _pthread_obj, tnode);
     pup_list_remove(&_thread->tnode);
-    KLOG_D("_wakeup_block_thread:%s", _thread->kobj.name);
+    // PUP_PRINTK("_wakeup_block_thread:%s", _thread->kobj.name);
     pup_sched_ready_insert(_thread);
 }
 
