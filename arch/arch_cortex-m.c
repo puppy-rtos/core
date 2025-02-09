@@ -6,6 +6,8 @@
 
 #include <puppy_core.h>
 
+#ifdef PUP_ARCH_CORTEX_M
+
 __attribute__((always_inline)) inline pup_base_t arch_irq_lock(void)
 {
     pup_base_t key;
@@ -295,3 +297,5 @@ __attribute__((naked)) void HardFault_Handler(void)
            "    BX      lr\n"
     );
 }
+
+#endif
