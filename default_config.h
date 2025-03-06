@@ -38,7 +38,7 @@
 #define PUP_CPU_NR 1
 #endif
 
-#define PUP_ASSERT(...) 
-#define PUP_PRINTK(...)
+#define PUP_ASSERT(x) if(!(x)) while(1);
+#define PUP_PRINTK(...) 
 
 #endif
