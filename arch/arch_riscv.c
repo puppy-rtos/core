@@ -119,7 +119,6 @@
  // NR_SHELL_CMD_EXPORT(trap_test, trap_test);
  #include <stdatomic.h>
  
- #ifndef P_ARCH_CORTEX_M0
  pup_weak void arch_spin_lock_init(arch_spinlock_t *lock)
  {
      atomic_flag_clear(&lock->flag);
@@ -136,42 +135,6 @@
  {
      atomic_flag_clear(&lock->flag);
  }
- 
- #else
- #include <pico/lock_core.h>
- 
- void arch_spin_lock_init(arch_spinlock_t *lock)
- {
-     static uint8_t spin_cnt = 0;
- 
-     if ( spin_cnt < 32)
-     {
-         lock->slock = (uint32_t)spin_lock_instance(spin_cnt);
-         spin_cnt = spin_cnt + 1;
-     }
-     else
-     {
-         lock->slock = 0;
-     }
- }
- 
- void arch_spin_lock(arch_spinlock_t *lock)
- {
-     if ( lock->slock != 0 )
-     {
-         spin_lock_unsafe_blocking((spin_lock_t*)lock->slock);
-     }
- }
- 
- void arch_spin_unlock(arch_spinlock_t *lock)
- {
-     if ( lock->slock != 0 )
-     {
-         spin_unlock_unsafe((spin_lock_t*)lock->slock);
-     }
- }
- #endif
- 
  
 //  #define KLOG_TAG  "arch.rv32"
 //  #define KLOG_LVL   KLOG_INFO
