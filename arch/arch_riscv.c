@@ -27,154 +27,44 @@
          : "memory");
  }
  
- __attribute__((always_inline)) inline bool arch_irq_locked(pup_base_t key)
+ __attribute__((always_inline)) inline pup_uint8_t arch_irq_locked(pup_base_t key)
  {
      return !(key & 0x08);
  }
  
- 
- #include "platform.h"
- #include "riscv.h"
- extern void trap_vector(void);
- extern void uart_isr(void);
- extern void timer_handler(void);
- 
- void trap_init()
- {
-     /*
-      * set the trap-vector base-address for machine-mode
-      */
-     w_mtvec((uint32_t)trap_vector);
- }
- 
- void external_interrupt_handler()
- {
-     int irq = plic_claim();
- 
-     if (irq == 10){
-         uart_isr();
-     } else if (irq) {
-         PUP_PRINTK("unexpected interrupt irq = %d\n", irq);
-     }
- 
-     if (irq) {
-         plic_complete(irq);
-     }
- }
- 
- uint32_t trap_handler(uint32_t epc, uint32_t cause)
- {
-     uint32_t return_pc = epc;
-     uint32_t cause_code = cause & 0xfff;
- 
-     if (cause & 0x80000000) {
-         /* Asynchronous trap - interrupt */
-         switch (cause_code) {
-         case 3:
-             // PUP_PRINTK("software interruption!\n");
-             sfi_handler();
-             break;
-         case 7:
-             // PUP_PRINTK("timer interruption!\n");
-             timer_handler();
-             break;
-         case 11:
-             // PUP_PRINTK("external interruption!\n");
-             external_interrupt_handler();
-             break;
-         default:
-             PUP_PRINTK("unknown async exception!\n");
-             break;
-         }
-     } else {
-         /* Synchronous trap - exception */
-         PUP_PRINTK("Sync exceptions!, code = %d\n", cause_code);
-         PUP_PRINTK("OOPS! What can I do!");
-         // list_thread();
-         while(1)
-         {}
-         // return_pc += 2;
-     }
- 
-     return return_pc;
- }
- 
- void trap_test()
- {
-     /*
-      * Synchronous exception code = 7
-      * Store/AMO access fault
-      */
-     *(int *)0x00000000 = 100;
- 
-     /*
-      * Synchronous exception code = 5
-      * Load access fault
-      */
-     //int a = *(int *)0x00000000;
- 
-     PUP_PRINTK("Yeah! I'm return back from trap!\n");
- }
- // #include "nr_micro_shell.h"
- // NR_SHELL_CMD_EXPORT(trap_test, trap_test);
- #include <stdatomic.h>
- 
- pup_weak void arch_spin_lock_init(arch_spinlock_t *lock)
- {
-     atomic_flag_clear(&lock->flag);
- }
- 
- pup_weak __attribute__((always_inline)) inline void arch_spin_lock(arch_spinlock_t *lock)
- {
-     while (atomic_flag_test_and_set(&lock->flag)) {
-         /* busy-wait */
-     }
- }
- 
- pup_weak __attribute__((always_inline)) inline void arch_spin_unlock(arch_spinlock_t *lock)
- {
-     atomic_flag_clear(&lock->flag);
- }
- 
-//  #define KLOG_TAG  "arch.rv32"
-//  #define KLOG_LVL   KLOG_INFO
-//  #include <puppy_klog.h>
- 
- 
- #define read_csr(reg) ({ unsigned long __tmp;                               \
-     asm volatile ("csrr %0, " #reg : "=r"(__tmp));                          \
-         __tmp; })
- 
- #define write_csr(reg, val) ({                                              \
-     if (__builtin_constant_p(val) && (unsigned long)(val) < 32)             \
-         asm volatile ("csrw " #reg ", %0" :: "i"(val));                     \
-     else                                                                    \
-         asm volatile ("csrw " #reg ", %0" :: "r"(val)); })
- 
- #define set_csr(reg, bit) ({ unsigned long __tmp;                           \
-     if (__builtin_constant_p(bit) && (unsigned long)(bit) < 32)             \
-         asm volatile ("csrrs %0, " #reg ", %1" : "=r"(__tmp) : "i"(bit));   \
-     else                                                                    \
-         asm volatile ("csrrs %0, " #reg ", %1" : "=r"(__tmp) : "r"(bit));   \
-             __tmp; })
- 
- #define clear_csr(reg, bit) ({ unsigned long __tmp;                         \
-     if (__builtin_constant_p(bit) && (unsigned long)(bit) < 32)             \
-         asm volatile ("csrrc %0, " #reg ", %1" : "=r"(__tmp) : "i"(bit));   \
-     else                                                                    \
-         asm volatile ("csrrc %0, " #reg ", %1" : "=r"(__tmp) : "r"(bit));   \
-             __tmp; })
- 
+//  #include <stdatomic.h>
+
+pup_weak void arch_spin_lock_init(arch_spinlock_t *lock) {
+    lock->flag = 0;
+}
+
+pup_weak __attribute__((always_inline)) inline void arch_spin_lock(arch_spinlock_t *lock) {
+    pup_uint32_t temp;
+    __asm volatile(
+        "lw %[temp], (%[flag])\n" // Load from memory location pointed to by flag
+        : [temp] "=&r" (temp)
+        : [flag] "r" (&lock->flag) // Pass the address of lock->flag in a register
+        : "memory"
+    );
+}
+
+pup_weak __attribute__((always_inline)) inline void arch_spin_unlock(arch_spinlock_t *lock) {
+    __asm volatile (
+        "sw zero, (%[flag])\n" // Store zero to the memory location pointed to by flag
+        : : [flag] "r" (&lock->flag), [zero] "r" ((pup_uint32_t)0) : "memory"
+    );
+}
+
  struct arch_thread
  {
-     uint32_t irq_flag;
-     uint32_t need_swap;
-     uint32_t stack_ptr;
+     pup_uint32_t irq_flag;
+     pup_uint32_t need_swap;
+     pup_uint32_t stack_ptr;
  };
  void arch_irq_enter(void)
  {
      struct arch_thread *arch;
-     if (pthread_self() == NULL)
+     if (pthread_self() == PUP_NULL)
          return ;
      arch = pup_pthread_archdata(pthread_self());
      arch->irq_flag ++;
@@ -183,16 +73,16 @@
  void arch_irq_leave(void)
  {
      struct arch_thread *arch;
-     if (pthread_self() == NULL)
+     if (pthread_self() == PUP_NULL)
          return ;
      arch = pup_pthread_archdata(pthread_self());
      arch->irq_flag --;
  }
- __attribute__((always_inline)) inline bool arch_in_irq(void)
+ __attribute__((always_inline)) inline pup_uint8_t arch_in_irq(void)
  {
      struct arch_thread *arch;
-     if (pthread_self() == NULL)
-         return true;
+     if (pthread_self() == PUP_NULL)
+         return PUP_TRUE;
      arch = pup_pthread_archdata(pthread_self()); 
      return (arch->irq_flag > 0);
  }
@@ -238,31 +128,31 @@
                        void        *param1,
                        void        *param2,
                        void    *stack_addr,
-                       uint32_t stack_size)
+                       pup_uint32_t stack_size)
  {
      int i;
      struct arch_thread *arch_data;
      _sf_t *sf;
      
-     arch_data = (struct arch_thread *)PUP_ALIGN_DOWN(((uint32_t)stack_addr + stack_size) - sizeof(struct arch_thread), 8);
-     sf = (_sf_t *)PUP_ALIGN_DOWN((uint32_t)arch_data - sizeof(_sf_t), 8);
+     arch_data = (struct arch_thread *)PUP_ALIGN_DOWN(((pup_uint32_t)stack_addr + stack_size) - sizeof(struct arch_thread), 8);
+     sf = (_sf_t *)PUP_ALIGN_DOWN((pup_uint32_t)arch_data - sizeof(_sf_t), 8);
  
      /* init all register */
-     for (i = 0; i < sizeof(_sf_t) / sizeof(uint32_t); i ++)
+     for (i = 0; i < sizeof(_sf_t) / sizeof(pup_uint32_t); i ++)
      {
-         ((uint32_t *)sf)[i] = 0xdeadbeef;
+         ((pup_uint32_t *)sf)[i] = 0xdeadbeef;
      }
      
-     sf->a0 = (uint32_t)param1;
-     sf->a1 = (uint32_t)param2;
+     sf->a0 = (pup_uint32_t)param1;
+     sf->a1 = (pup_uint32_t)param2;
      sf->ra = 0;
-     sf->epc = (uint32_t)entry;
+     sf->epc = (pup_uint32_t)entry;
  
      sf->mstatus = 0x1880;
  
      arch_data->irq_flag = 0;
      arch_data->need_swap = 0;
-     arch_data->stack_ptr = ((uint32_t)sf);
+     arch_data->stack_ptr = ((pup_uint32_t)sf);
      return arch_data;
  }
  __attribute__((naked)) void riscv_swap(pup_ubase_t from, pup_ubase_t to);
@@ -270,16 +160,16 @@
  void *arch_get_from_sp(void)
  {
      struct arch_thread *arch;
-     if (pthread_self() == NULL)
-         return NULL;
+     if (pthread_self() == PUP_NULL)
+         return PUP_NULL;
      arch = pup_pthread_archdata(pthread_self());
      return &arch->stack_ptr;
  }
  void *arch_get_to_sp(void)
  {
      struct arch_thread *arch;
-     if (pup_thread_next() == NULL)
-         return NULL;
+     if (pup_thread_next() == PUP_NULL)
+         return PUP_NULL;
      arch = pup_pthread_archdata(pup_thread_next());
      return &arch->stack_ptr;
  }
@@ -433,42 +323,5 @@
      __asm ("mret");
  }
  
- void dump_contex(struct stack_frame *context)
- {
-     PUP_PRINTK("Stack frame:\n----------------------------------------\n");
-     PUP_PRINTK("ra      : 0x%08x\n", context->ra);
-     PUP_PRINTK("mstatus : 0x%08x\n", read_csr(0x300));//mstatus
-     PUP_PRINTK("t0      : 0x%08x\n", context->t0);
-     PUP_PRINTK("t1      : 0x%08x\n", context->t1);
-     PUP_PRINTK("t2      : 0x%08x\n", context->t2);
-     PUP_PRINTK("a0      : 0x%08x\n", context->a0);
-     PUP_PRINTK("a1      : 0x%08x\n", context->a1);
-     PUP_PRINTK("a2      : 0x%08x\n", context->a2);
-     PUP_PRINTK("a3      : 0x%08x\n", context->a3);
-     PUP_PRINTK("a4      : 0x%08x\n", context->a4);
-     PUP_PRINTK("a5      : 0x%08x\n", context->a5);
- #ifndef __riscv_32e
-     PUP_PRINTK("a6      : 0x%08x\n", context->a6);
-     PUP_PRINTK("a7      : 0x%08x\n", context->a7);
-     PUP_PRINTK("t3      : 0x%08x\n", context->t3);
-     PUP_PRINTK("t4      : 0x%08x\n", context->t4);
-     PUP_PRINTK("t5      : 0x%08x\n", context->t5);
-     PUP_PRINTK("t6      : 0x%08x\n", context->t6);
- #endif
- }
- // void trap_handler()
- // {
- //     uint32_t mscratch = read_csr(0x340);
- //     // uint32_t irq_id = (mcause & 0x1F);
- //     // uint32_t exception = !(mcause & 0x80000000);
- //     // if(exception)
- //     // {
- //         dump_contex((struct stack_frame *)mscratch);
- //     // }
- //     // else
- //     // {
- //     //     rv32irq_table[irq_id].handler(irq_id, rv32irq_table[irq_id].param);
- //     // }	
- // }
- 
+
  #endif

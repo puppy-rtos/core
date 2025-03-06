@@ -6,12 +6,6 @@
 #ifndef __PUPPY_H__
 #define __PUPPY_H__
 
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdatomic.h>
-
 #include <default_config.h>
 
 #define pup_weak                   __attribute__((weak))
@@ -20,16 +14,30 @@
 #define pup_align(n)               __attribute__((aligned(n)))
 
 #define PUP_UNUSED(x)                   ((void)x)
+#define PUP_NULL                        (0)
+#define PUP_FAIL                        0
+#define PUP_TRUE                        (!PUP_FAIL)
 
 #if defined(__ARMCC_VERSION)           /* ARM Compiler */
 typedef unsigned long ssize_t;
 #endif
 
 /* Puppy-RTOS object definitions */
-typedef size_t            pup_ubase_t;
-typedef ssize_t           pup_base_t;
+typedef unsigned long pup_ubase_t;
+typedef long pup_base_t;
 typedef void             *pup_obj_t;
 typedef pup_ubase_t       pup_tick_t;
+typedef pup_ubase_t       pup_size_t;
+
+/* base data typedef */
+typedef unsigned char      pup_uint8_t;
+typedef unsigned short     pup_uint16_t;
+typedef unsigned int       pup_uint32_t;
+typedef unsigned long long pup_uint64_t;
+typedef signed char        pup_int8_t;
+typedef signed short       pup_int16_t;
+typedef signed int         pup_int32_t;
+typedef signed long long   pup_int64_t;
 
 #define PUP_ALIGN(size, align)           (((size) + (align) - 1) & ~((align) - 1))
 #define PUP_ALIGN_DOWN(size, align)      ((size) & ~((align) - 1))
@@ -76,13 +84,13 @@ typedef struct _list_node pup_node_t;
 struct pthread_attr_s
 {
     const char *name;
-    uint8_t priority;            /* Priority of the pthread */
-    uint8_t detachstate;         /* Initialize to the detach state */
+    pup_uint8_t priority;            /* Priority of the pthread */
+    pup_uint8_t detachstate;         /* Initialize to the detach state */
 
     void  *stackaddr;            /* Address of memory to be used as stack */
-    size_t stacksize;            /* Size of the stack allocated for the pthread */
+    pup_size_t stacksize;            /* Size of the stack allocated for the pthread */
 #if PUP_CPU_NR > 1
-    uint8_t bindcpu;                 /* CPU number to run the pthread */
+    pup_uint8_t bindcpu;                 /* CPU number to run the pthread */
 #endif
 };
 typedef struct pthread_attr_s pthread_attr_t;
@@ -94,11 +102,11 @@ void *puppy_main_thread(void *arg);
 int pthread_attr_destroy(pthread_attr_t * thread_attributes);
 int pthread_attr_getdetachstate(pthread_attr_t * thread_attributes, int * detach_state);
 int pthread_attr_getstackaddr(pthread_attr_t * thread_attributes, void ** stack_address);
-int pthread_attr_getstacksize(pthread_attr_t * thread_attributes, size_t * stack_size);
+int pthread_attr_getstacksize(pthread_attr_t * thread_attributes, pup_size_t * stack_size);
 int pthread_attr_init(pthread_attr_t * thread_attributes);
 int pthread_attr_setdetachstate(pthread_attr_t * thread_attributes, int detach_state);
 int pthread_attr_setstackaddr(pthread_attr_t * thread_attributes, void * stack_address);
-int pthread_attr_setstacksize(pthread_attr_t * thread_attributes, size_t stack_size);
+int pthread_attr_setstacksize(pthread_attr_t * thread_attributes, pup_size_t stack_size);
 void pthread_cleanup_pop(int execute);
 void pthread_cleanup_push(void (*cleanup_handler)(void *), void * argument);
 int pthread_create(pthread_t * thread_handle, pthread_attr_t * attr, void *(*start_routine)(void *), void *arg);
@@ -133,7 +141,7 @@ pthread_t pup_thread_next(void);
  */
 
 struct _sem_obj {
-    uint16_t    value;
+    pup_uint16_t    value;
     pup_list_t  blocking_list;
 };
 
@@ -166,23 +174,18 @@ int sem_wait(sem_t * semaphore_handle);
 
 pup_base_t arch_irq_lock(void);
 void arch_irq_unlock(pup_base_t key);
-bool arch_irq_locked(pup_base_t key);
-bool arch_in_irq(void);
+pup_uint8_t arch_irq_locked(pup_base_t key);
+pup_uint8_t arch_in_irq(void);
 void *arch_new_thread(void         *entry,
                       void        *param1,
                       void        *param2,
                       void    *stack_addr,
-                      uint32_t stack_size);
+                      pup_uint32_t stack_size);
 void arch_swap(pthread_t old_thread, pthread_t new_thread);
 void *pup_pthread_archdata(pthread_t obj);
 
-typedef union {
-    unsigned long slock;
-    struct __arch_tickets {
-        unsigned short owner;
-        unsigned short next;
-    } tickets;
-    atomic_flag flag;
+typedef struct {
+    volatile pup_uint32_t flag;
 } arch_spinlock_t;
 
 void arch_spin_lock_init(arch_spinlock_t *lock);
