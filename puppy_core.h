@@ -15,7 +15,7 @@
 
 #define PUP_UNUSED(x)                   ((void)x)
 #define PUP_NULL                        (0)
-#define PUP_FAIL                        0
+#define PUP_FAIL                        (0)
 #define PUP_TRUE                        (!PUP_FAIL)
 
 #if defined(__ARMCC_VERSION)           /* ARM Compiler */
@@ -63,7 +63,7 @@ typedef struct _list_node pup_node_t;
 /**@}*/
 
 /**
- * @addtogroup POSIX Threads
+ * @addtogroup POSIX_Thread
  * @{
  */
 
@@ -98,13 +98,70 @@ typedef void* pthread_t;
 void puppy_init(void);
 void* puppy_main_thread(void* arg);
 
+/**
+ * @brief Initialize thread attributes object.
+ *
+ * @param thread_attributes Pointer to the thread attributes object.
+ * @return 0 on success, error code on failure.
+ */
 int pthread_attr_init(pthread_attr_t* thread_attributes);
+
+/**
+ * @brief Destroy thread attributes object.
+ *
+ * @param thread_attributes Pointer to the thread attributes object.
+ * @return 0 on success, error code on failure.
+ */
 int pthread_attr_destroy(pthread_attr_t* thread_attributes);
+
+/**
+ * @brief Create a new thread.
+ *
+ * @param thread_handle Pointer to the thread handle.
+ * @param attr Pointer to the thread attributes object.
+ * @param start_routine Pointer to the start routine function.
+ * @param arg Pointer to the argument passed to the start routine.
+ * @return 0 on success, error code on failure.
+ */
 int pthread_create(pthread_t* thread_handle, pthread_attr_t* attr, void* (*start_routine)(void*), void* arg);
+
+/**
+ * @brief Terminate the calling thread.
+ *
+ * @param exit_value Pointer to the exit value.
+ */
 void pthread_exit(void* exit_value);
+
+/**
+ * @brief Get the calling thread's ID.
+ *
+ * @return The thread ID of the calling thread.
+ */
 pthread_t pthread_self(void);
+
+/**
+ * @brief Suspend a thread.
+ *
+ * @param thread_handle The handle of the thread to suspend.
+ * @return 0 on success, error code on failure.
+ */
 int pthread_suspend(pthread_t thread_handle);
+
+/**
+ * @brief Resume a suspended thread.
+ *
+ * @param thread_handle The handle of the thread to resume.
+ * @return 0 on success, error code on failure.
+ */
 int pthread_resume(pthread_t thread_handle);
+
+/**
+ * @brief Wait for a thread to terminate.
+ *
+ * @param thread_handle The handle of the thread to wait for.
+ * @param value_destination Pointer to the location where the exit value will be stored.
+ * @return 0 on success, error code on failure.
+ */
 int pthread_join(pthread_t thread_handle, void** value_destination);
 
 int pthread_attr_getstackaddr(pthread_attr_t* thread_attributes, void** stack_address);
@@ -147,7 +204,7 @@ int sem_post(sem_t* semaphore_handle);
 
 
 /**
- * @addtogroup Arch Interface
+ * @addtogroup Arch_Interface
  * @{
  */
 
@@ -173,11 +230,4 @@ void arch_spin_unlock(arch_spinlock_t* lock);
 /**@}*/
 
 
-/**
- * @addtogroup IPC
- * @{
- */
-
-
- /**@}*/
 #endif

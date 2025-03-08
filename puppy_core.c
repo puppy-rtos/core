@@ -347,11 +347,8 @@ static int pup_sched_ready_insert(struct _pthread_obj* thread) {
         pup_list_append(_ready_queue, &_thread->tnode);
     }
 
-    // PUP_PRINTK("p_sched_ready_insert done:_ready_queue->head:%x", _ready_queue->next);
-
 #if PUP_CPU_NR > 1
     if (cpuid_last != PUP_GET_CPU_ID()) {
-        // PUP_PRINTK("need send ipi");
         need_send = cpuid_last;
     }
     cpuid_last = (cpuid_last + 1) % PUP_CPU_NR;
@@ -391,7 +388,6 @@ static int pup_sched_ready_remove(struct _pthread_obj* thread) {
     struct _pthread_obj* _thread = thread;
     pup_base_t key = arch_irq_lock();
 
-    // PUP_PRINTK("p_sched_ready_remove:tnode:%x",&_thread->tnode);
     pup_list_remove(&_thread->tnode);
 
     arch_irq_unlock(key);
@@ -401,29 +397,22 @@ static int pup_sched_ready_remove(struct _pthread_obj* thread) {
 /**@}*/
 
 /**
- * @addtogroup POSIX Thread
+ * @addtogroup POSIX_Thread
  * @{
  */
 
-void pup_thread_entry(void (*entry)(void* parameter), void* param) {
-    // PUP_PRINTK("p_thread_entry enter...");
+static void pup_thread_entry(void (*entry)(void* parameter), void* param) {
     if (entry) {
         entry(param);
     }
-
-    // PUP_PRINTK("p_thread_entry exit...");
     pthread_exit(PUP_NULL);
-    while (1)
-        ;
+    PUP_ASSERT(0);
 }
 static void _p_thread_cleanup(struct _pthread_obj* obj) {
 }
 
 pthread_t pthread_self(void) {
     return pup_cpu_self()->curr_thread;
-}
-pthread_t pup_thread_next(void) {
-    return pup_cpu_self()->next_thread;
 }
 int pthread_attr_init(pthread_attr_t* thread_attributes) {
     *thread_attributes = pthread_default_attr;
@@ -472,11 +461,9 @@ int pthread_create(pthread_t* thread_handle, pthread_attr_t* attr,
 
     PUP_ASSERT(attr && attr->stackaddr);
     // create pthread date from stack top.
-    // PUP_PRINTK("pthread_obj attr.stackaddr:0x%x, size:%d", attr->stackaddr, attr->stacksize);
     pthread_obj = (struct _pthread_obj*)PUP_ALIGN_DOWN((pup_ubase_t)(attr->stackaddr +
                                                                      (attr->stacksize - sizeof(struct _pthread_obj))),
                                                        PUP_ALIGN_SIZE);
-    // PUP_PRINTK("pthread_obj created at addr:0x%x", pthread_obj);
     if (!pthread_obj)
         return 0;
 
@@ -641,8 +628,7 @@ void puppy_init(void) {
     pup_subcpu_start();
 #endif
     pup_sched_unlock();
-    while (1)
-        ;
+    PUP_ASSERT(0);
 }
 /**
  * @addtogroup Semaphores
@@ -678,16 +664,13 @@ static void _block_thread(pup_list_t* list, struct _pthread_obj* thread) {
             pup_list_append(list, &thread->tnode);
         }
     }
-    // PUP_PRINTK("_block_thread:%s", thread->kobj.name);
     thread->state = PUP_THREAD_STATE_BLOCK;
 }
 
 static void _wakeup_block_thread(pup_list_t* list) {
     struct _pthread_obj* _thread;
-    _thread = pup_list_entry(list->next,
-                             struct _pthread_obj, tnode);
+    _thread = pup_list_entry(list->next, struct _pthread_obj, tnode);
     pup_list_remove(&_thread->tnode);
-    // PUP_PRINTK("_wakeup_block_thread:%s", _thread->kobj.name);
     pup_sched_ready_insert(_thread);
 }
 
@@ -708,12 +691,22 @@ _exit:
 }
 
 int sem_trywait(sem_t* semaphore_handle) {
-    return -1;
+    int ret = 0;
+    sem_t* sem = semaphore_handle;
+    pup_base_t key = arch_irq_lock();
+    if (sem->value == 0) {
+        ret = -1;
+        goto _exit;
+    }
+    sem->value--;
+_exit:
+    arch_irq_unlock(key);
+    return ret;
 }
 
 int sem_wait(sem_t* semaphore_handle) {
-    sem_t* sem = semaphore_handle;
     int ret = 0;
+    sem_t* sem = semaphore_handle;
     pup_base_t key = arch_irq_lock();
     if (sem->value > 0) {
         sem->value--;
