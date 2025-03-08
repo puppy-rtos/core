@@ -39,6 +39,6 @@
 #endif
 
 #define PUP_ASSERT(...) 
-#define PUP_PRINTK(...)
+#define PUP_PRINTK my_printf
 
 #endif

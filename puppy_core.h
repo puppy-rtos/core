@@ -99,39 +99,32 @@ typedef void *pthread_t;
 void puppy_init(void);
 void *puppy_main_thread(void *arg);
 
-int pthread_attr_destroy(pthread_attr_t * thread_attributes);
-int pthread_attr_getdetachstate(pthread_attr_t * thread_attributes, int * detach_state);
-int pthread_attr_getstackaddr(pthread_attr_t * thread_attributes, void ** stack_address);
-int pthread_attr_getstacksize(pthread_attr_t * thread_attributes, pup_size_t * stack_size);
 int pthread_attr_init(pthread_attr_t * thread_attributes);
-int pthread_attr_setdetachstate(pthread_attr_t * thread_attributes, int detach_state);
-int pthread_attr_setstackaddr(pthread_attr_t * thread_attributes, void * stack_address);
-int pthread_attr_setstacksize(pthread_attr_t * thread_attributes, pup_size_t stack_size);
-void pthread_cleanup_pop(int execute);
-void pthread_cleanup_push(void (*cleanup_handler)(void *), void * argument);
+int pthread_attr_destroy(pthread_attr_t * thread_attributes);
 int pthread_create(pthread_t * thread_handle, pthread_attr_t * attr, void *(*start_routine)(void *), void *arg);
-int pthread_detach(pthread_t thread_handle);
-int pthread_equal(pthread_t first_thread, pthread_t second_thread);
 void pthread_exit(void * exit_value);
-int pthread_join(pthread_t thread_handle, void ** value_destination);
 pthread_t pthread_self(void);
+int pthread_suspend(pthread_t thread_handle);
+int pthread_resume(pthread_t thread_handle);
+int pthread_join(pthread_t thread_handle, void ** value_destination);
+
+int pthread_attr_getstackaddr(pthread_attr_t * thread_attributes, void ** stack_address);
+int pthread_attr_setstackaddr(pthread_attr_t * thread_attributes, void * stack_address);
+int pthread_attr_getstacksize(pthread_attr_t * thread_attributes, pup_size_t * stack_size);
+int pthread_attr_setstacksize(pthread_attr_t * thread_attributes, pup_size_t stack_size);
 int sched_yield(void);
 int sched_getcpu(void);
-// int pup_pthread_priority_change(pthread_t thread_handle, int new_priority, int * old_priority);
-// int pup_pthread_resume(pthread_t thread_handle);
-// int pup_pthread_start(size_t run_time_id, void * memory_start, size_t memory_size);
-// int pup_pthread_stack_check(pthread_t thread_handle, size_t * minimum_available_stack);
-// int pup_pthread_suspend(pthread_t thread_handle);
+
 // int pup_pthread_attr_getname(pthread_attr_t * thread_attributes, char ** name);
+int pthread_attr_setname(pthread_attr_t * thread_attributes, char * name);
 // int pup_pthread_attr_getpriority(pthread_attr_t * thread_attributes, int * priority);
+int pthread_attr_setpriority(pthread_attr_t * thread_attributes, int priority);
 // int pup_pthread_attr_gettimeslice(pthread_attr_t * thread_attributes, size_t * thread_time_slice);
-int pup_pthread_attr_setname(pthread_attr_t * thread_attributes, char * name);
-int pup_pthread_attr_setpriority(pthread_attr_t * thread_attributes, int priority);
-int pup_pthread_attr_setcpu(pthread_attr_t * thread_attributes, int cpu);
 // int pup_pthread_attr_settimeslice(pthread_attr_t * thread_attributes, size_t thread_time_slice);
+int pthread_attr_setcpu(pthread_attr_t * thread_attributes, int cpu);
 // int pup_pthread_information_get(pthread_t thread_handle, char ** name, int * state, int * priority, 
 //  void ** stack_limit, void ** stack_pointer, size_t * minimum_stack, pthread_t * next_thread);
-pthread_t pup_thread_next(void);
+
 
 /**@}*/
 

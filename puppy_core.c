@@ -237,12 +237,12 @@ void pup_cpu_init(void)
         // create idle thread
         pthread_attr_t attr;
         pthread_attr_init(&attr);
-        pup_pthread_attr_setpriority(&attr, PUP_THREAD_PRIO_MAX);
+        pthread_attr_setpriority(&attr, PUP_THREAD_PRIO_MAX);
         pthread_attr_setstacksize(&attr, PUP_IDLE_THREAD_STACK_SIZE);
         pthread_attr_setstackaddr(&attr, _g_idle_thread_stack[i]);
-        pup_pthread_attr_setname(&attr, "idle");
+        pthread_attr_setname(&attr, "idle");
 #if PUP_CPU_NR > 1
-        pup_pthread_attr_setcpu(&attr, i);
+        pthread_attr_setcpu(&attr, i);
 #endif
         pthread_create(PUP_NULL, &attr, _pup_idle_thread, PUP_NULL);
     }
@@ -306,8 +306,13 @@ int pup_sched(void)
                 pup_sched_ready_insert(_cpu->curr_thread);
             }
         }
+        if(_cpu->curr_thread) {
+            arch_swap(_cpu->curr_thread->arch_data, _cpu->next_thread->arch_data);
+        }
+        else {
+            arch_swap(PUP_NULL, _cpu->next_thread->arch_data);
+        }
 
-        arch_swap(_cpu->curr_thread, _cpu->next_thread);
         ret = pup_get_errno();
     }
 
@@ -486,13 +491,13 @@ int pthread_attr_setstacksize(pthread_attr_t *thread_attributes, pup_size_t stac
     return 0;
 }
 
-int pup_pthread_attr_setpriority(pthread_attr_t *thread_attributes, int priority)
+int pthread_attr_setpriority(pthread_attr_t *thread_attributes, int priority)
 {
     thread_attributes->priority = priority;
     return 0;
 }
 #if PUP_CPU_NR > 1
-int pup_pthread_attr_setcpu(pthread_attr_t *thread_attributes, int cpu)
+int pthread_attr_setcpu(pthread_attr_t *thread_attributes, int cpu)
 {
     thread_attributes->bindcpu = cpu;
     return 0;
@@ -512,7 +517,7 @@ int pthread_setname_np(pthread_t thread, const char *name)
     pthread_obj->attr.name = name;
     return 0;
 }
-int pup_pthread_attr_setname(pthread_attr_t *thread_attributes, char *name)
+int pthread_attr_setname(pthread_attr_t *thread_attributes, char *name)
 {
     thread_attributes->name = name;
     return 0;
@@ -701,7 +706,7 @@ void puppy_init(void)
     pthread_attr_init(&attr);
     pthread_attr_setstacksize(&attr, sizeof(main_pthread_stack));
     pthread_attr_setstackaddr(&attr, main_pthread_stack);
-    pup_pthread_attr_setname(&attr, "main");
+    pthread_attr_setname(&attr, "main");
 
     pthread_create(PUP_NULL, &attr, puppy_main_thread, PUP_NULL);
 #if PUP_CPU_NR > 1
