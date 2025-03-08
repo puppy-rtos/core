@@ -53,37 +53,31 @@ pup_weak __attribute__((always_inline)) inline void arch_spin_unlock(arch_spinlo
     );
 }
 
-struct arch_thread
+static struct arch_thread
+{
+    pup_uint32_t stack_ptr;
+};
+
+static struct arch_cpu
 {
     pup_uint32_t irq_flag;
     pup_uint32_t need_swap;
-    pup_uint32_t stack_ptr;
-};
+    pup_uint32_t to_stack_swap;
+} arch_cpu[PUP_CPU_NR] = {0};
+
 void arch_irq_enter(void)
 {
-    struct arch_thread *arch;
-    if (pthread_self() == PUP_NULL)
-        return ;
-    arch = pup_pthread_archdata(pthread_self());
-    arch->irq_flag ++;
-
+    arch_cpu[PUP_GET_CPU_ID()].irq_flag ++;
 }
 void arch_irq_leave(void)
 {
-    struct arch_thread *arch;
-    if (pthread_self() == PUP_NULL)
-        return ;
-    arch = pup_pthread_archdata(pthread_self());
-    arch->irq_flag --;
+    arch_cpu[PUP_GET_CPU_ID()].irq_flag --;
 }
 __attribute__((always_inline)) inline pup_uint8_t arch_in_irq(void)
 {
-    struct arch_thread *arch;
-    if (pthread_self() == PUP_NULL)
-        return PUP_TRUE;
-    arch = pup_pthread_archdata(pthread_self()); 
-    return (arch->irq_flag > 0);
+    return (arch_cpu[PUP_GET_CPU_ID()].irq_flag > 0);
 }
+
 typedef struct stack_frame
 {
     pup_ubase_t epc;        /* epc - epc    - program counter                     */
@@ -148,46 +142,29 @@ void *arch_new_thread(void         *entry,
 
     sf->mstatus = 0x1880;
 
-    arch_data->irq_flag = 0;
-    arch_data->need_swap = 0;
     arch_data->stack_ptr = ((pup_uint32_t)sf);
     return arch_data;
 }
 __attribute__((naked)) void riscv_swap(pup_ubase_t from, pup_ubase_t to);
 
-int arch_need_swap(void)
-{
-    if (pthread_self())
-    {
-        struct arch_thread *arch;
-        arch = pup_pthread_archdata(pthread_self());
-        return arch->need_swap;
-    }
-    return 0;
+int arch_need_swap(void) {
+    return arch_cpu[PUP_GET_CPU_ID()].need_swap;
 }
-void arch_need_swap_clean(void)
-{
-    if (pthread_self())
-    {
-        struct arch_thread *arch;
-        arch = pup_pthread_archdata(pthread_self());
-        arch->need_swap = 0;
-    }
+void arch_need_swap_clean(void) {
+    arch_cpu[PUP_GET_CPU_ID()].need_swap = 0;
 }
 
-void *to_sp[PUP_CPU_NR] = {0};
 void *arch_get_to_sp(void)
 {
-    return to_sp[PUP_GET_CPU_ID()];
+    return arch_cpu[PUP_GET_CPU_ID()].to_stack_swap;
 }
 
 void arch_swap(void *from, void* to)
 {
     if (arch_in_irq() && from)
     {
-        struct arch_thread *arch = from;
-        arch->need_swap = 1;
-        to_sp[PUP_GET_CPU_ID()] = &((struct arch_thread *)to)->stack_ptr;
+        arch_cpu[PUP_GET_CPU_ID()].need_swap = 1;
+        arch_cpu[PUP_GET_CPU_ID()].to_stack_swap = &((struct arch_thread *)to)->stack_ptr;
         return;
     }
     pup_sched_swap_done_cb(); /* todo: 执行时的上下文不对 */

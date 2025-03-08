@@ -175,7 +175,6 @@ void *arch_new_thread(void         *entry,
                       void    *stack_addr,
                       pup_uint32_t stack_size);
 void arch_swap(pthread_t old_thread, pthread_t new_thread);
-void *pup_pthread_archdata(pthread_t obj);
 
 typedef struct {
     volatile pup_uint32_t flag;

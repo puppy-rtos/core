@@ -678,12 +678,6 @@ int sched_yield(void)
 
 /**@}*/
 
-void *pup_pthread_archdata(pthread_t obj)
-{
-    struct _pthread_obj *thread = obj;
-    return thread->arch_data;
-}
-
 void pup_show_version(void)
 {
     PUP_PRINTK("\n\nBuild Time: %s %s\n", __DATE__, __TIME__);
