@@ -122,9 +122,6 @@ int pthread_attr_setpriority(pthread_attr_t * thread_attributes, int priority);
 // int pup_pthread_attr_gettimeslice(pthread_attr_t * thread_attributes, size_t * thread_time_slice);
 // int pup_pthread_attr_settimeslice(pthread_attr_t * thread_attributes, size_t thread_time_slice);
 int pthread_attr_setcpu(pthread_attr_t * thread_attributes, int cpu);
-// int pup_pthread_information_get(pthread_t thread_handle, char ** name, int * state, int * priority, 
-//  void ** stack_limit, void ** stack_pointer, size_t * minimum_stack, pthread_t * next_thread);
-
 
 /**@}*/
 
@@ -140,22 +137,12 @@ struct _sem_obj {
 
 typedef struct _sem_obj sem_t;
 
-int sem_destroy(sem_t * semaphore_handle);
 int sem_init(sem_t * semaphore_handle, int pshared, unsigned int value);
-int sem_post(sem_t * semaphore_handle);
-int sem_trywait(sem_t * semaphore_handle);
+int sem_destroy(sem_t * semaphore_handle);
 int sem_wait(sem_t * semaphore_handle);
-// int pup_sem_extend_init(sem_t * semaphore_handle, int pshared, unsigned int value, 
-//  semattr_t * semaphore_attributes);
-// int pup_sem_timedwait(sem_t * semaphore_handle, tick_t timemout_ticks);
-// int pup_semattr_destroy(semattr_t *semaphore_attributes);
-// int pup_semattr_getcontroladdr(semattr_t *semaphore_attributes, void ** semaphore_control_address);
-// int pup_semattr_getcontrolsize(semattr_t *semaphore_attributes, size_t * semaphore_control_size);
-// int pup_semattr_getname(semattr_t *semaphore_attributes, char ** semaphore_name);
-// int pup_semattr_init(semattr_t *semaphore_attributes);
-// int pup_semattr_setcontroladdr(semattr_t *semaphore_attributes, void * semaphore_control_address, 
-//  size_t semaphore_control_size);
-// int pup_semattr_setname(semattr_t *semaphore_attributes, char * semaphore_name);
+int sem_trywait(sem_t * semaphore_handle);
+int sem_post(sem_t * semaphore_handle);
+// int sem_timedwait(sem_t * semaphore_handle, tick_t timemout_ticks);
 
 /**@}*/
 
